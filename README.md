@@ -354,7 +354,7 @@ You can easily verify these claims on your local machine using the provided `Mak
 
 ---
 
-## Deep-Dive Technical Documentation
+## Technical Documentation
 
 I have extensively documented every architectural decision, infrastructure configuration, and data contract in this repository. These documents serve as a blueprint for the entire system design:
 
