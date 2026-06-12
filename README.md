@@ -172,6 +172,9 @@ cd go-distributed-flashsale-kf
 
 # 2. Start everything (infrastructure + all microservices)
 make prod-up
+
+# 3. Stop everything
+make prod-down
 ```
 
 **Services will be available at:**
