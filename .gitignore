@@ -35,12 +35,22 @@ docs/architecture/domain-architecture-sync.md
 !docs/database/
 docs/database/logical-data-model.md
 !docs/deployment/
+docs/deployment/docker-compose-architecture.md
 !docs/events/
+docs/events/event-contracts.md
 !docs/grpc/
+docs/grpc/README.md
 !docs/implementation/
+docs/implementation/technology-decisions.md
+docs/implementation/implementation-phases.md
 !docs/observability/
+docs/observability/opentelemetry-code-guide.md
+docs/observability/grafana-setup-guide.md
+docs/observability/metrics-dashboard.md
+docs/observability/TUTORIAL_MEMBACA_LOG_LOKI.md
+docs/observability/grafana-dashboards.md
+docs/observability/tracing-and-idempotency.md
 !docs/openapi.yaml
-!docs/interview-qa.md
 
 # Test Results
 results/
