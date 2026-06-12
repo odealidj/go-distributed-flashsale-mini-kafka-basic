@@ -56,6 +56,12 @@ docs/observability/tracing-and-idempotency.md
 results/
 performance-tests/results/
 
+# Performance Tests Docs
+performance-tests/k6/README.md
+performance-tests/k6/TUTORIAL_MEMBACA_HASIL_K6.md
+performance-tests/README.md
+performance-tests/TUTORIAL_MEMBACA_HASIL_K6.md
+
 # IDE and OS
 .vscode/
 .idea/
