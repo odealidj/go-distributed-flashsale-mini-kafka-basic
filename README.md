@@ -360,7 +360,6 @@ I have extensively documented every architectural decision, infrastructure confi
 
 | Focus Area | Document | Description |
 |---|---|---|
-| **Master Blueprint** | [`docs/BLUEPRINT.md`](docs/BLUEPRINT.md) | **Start Here:** A complete, technology-agnostic blueprint of the entire Flash Sale system architecture. |
 | **System Overview** | [`docs/architecture/system-architecture.md`](docs/architecture/system-architecture.md) | High-level topology, component diagrams, and traffic flow. |
 | **Domain Logic** | [`docs/architecture/domain-architecture.md`](docs/architecture/domain-architecture.md) | C4 Model, bounded contexts, and service responsibilities. |
 | **Saga Pattern** | [`docs/architecture/checkout-saga.md`](docs/architecture/checkout-saga.md) | Step-by-step Mermaid diagrams of the happy path, compensation, and reconciliation flows. |
