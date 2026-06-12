@@ -188,23 +188,6 @@ make prod-down
 
 ---
 
-## Make Commands
-
-| Command | Description |
-|---|---|
-| `make up` | Start infrastructure (Docker) + all Go microservices |
-| `make down` | Stop all microservices + infrastructure |
-| `make prod-up` | Start production infrastructure (Redis Sentinel HA + Kafka) |
-| `make prod-down` | Stop production infrastructure |
-| `make infra-up` | Start only Docker infra (for IDE debugging) |
-| `make run-all` | Start all 6 Go services in background (Docker) |
-| `make stop-all` | Stop all Go services (Docker) |
-| `make run-local-all` | Run all 6 Go services locally on host (nohup) |
-| `make stop-local-all` | Stop all local Go services on host |
-| `make proto` | Recompile all `.proto` files to Go code |
-
----
-
 ## API Usage
 
 > [!TIP]
