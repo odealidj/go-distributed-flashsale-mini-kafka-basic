@@ -28,6 +28,7 @@ docs/*
 !docs/architecture/
 docs/architecture/domain-architecture.md
 docs/architecture/resilience-patterns.md
+docs/architecture/background-workers.md
 !docs/database/
 docs/database/logical-data-model.md
 !docs/deployment/
