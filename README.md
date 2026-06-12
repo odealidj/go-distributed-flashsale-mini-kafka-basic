@@ -53,9 +53,10 @@ graph TD
     Kafka -->|OrderCancelledEvent| Inventory
     Order -->|INSERT order| PG_ORD
     Order -->|Relay Worker| Kafka
-    Kafka -->|StockReservedEvent| Payment
+    Kafka -->|PaymentCompleted / Failed| Order
     Payment --- PG_PAY
-    Payment -->|PaymentFailed → Kafka| Kafka
+    Payment -->|INSERT outbox| PG_PAY
+    Payment -->|Relay Worker| Kafka
 
     GW -.->|traceparent| Jaeger
     Inventory -.->|span| Jaeger
