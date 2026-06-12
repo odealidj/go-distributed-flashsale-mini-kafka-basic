@@ -117,6 +117,9 @@ If a service crashes **after** cutting Redis stock but **before** writing to the
 ### 🔷 Prevented Cascading Failures (Circuit Breaker)
 Implemented `sony/gobreaker` in the API Gateway. If a downstream service degrades, the circuit trips open, immediately returning errors instead of exhausting connection pools. Protects the entire ecosystem from catastrophic cascading failures.
 
+### ⚡ Real-Time Client Notifications (Server-Sent Events & Redis PubSub)
+To provide a seamless user experience during asynchronous checkouts, I implemented a Server-Sent Events (SSE) endpoint. The API Gateway subscribes to a Redis Pub/Sub channel and pushes the exact `order_id` status to the client the millisecond the Saga workflow completes, eliminating the need for expensive HTTP polling.
+
 ### 📭 Guaranteed No Event Loss (Dead Letter Queue & Retry Backoff)
 Configured Kafka consumers with an exponential backoff retry mechanism (500ms → 5s). If an event fails after 3 retries, it is gracefully routed to a dedicated DLQ (`flashsale.order.dlq`), ensuring zero data loss and enabling manual replay.
 
@@ -254,7 +257,22 @@ curl -X POST http://localhost:18081/api/v1/checkout/long-polling \
 ```
 **Response `200 OK`** (if finished within 5s) or **`202 Accepted`** (if still processing).
 
-> **Note on Polling:** If using pubsub or if long-polling returns 202, the checkout is asynchronous. Use the `order_id` from the response to poll the status before paying.
+#### 3. Server-Sent Events (SSE) — *Recommended for Modern Frontends*
+Keeps a lightweight unidirectional stream open to push the status to the client in real-time.
+```bash
+curl -N -X POST http://localhost:18081/api/v1/checkout/sse \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <YOUR_TOKEN>" \
+  -H "X-Idempotency-Key: $(uuidgen)" \
+  -d '{"product_id": "prod_1"}'
+```
+**Response stream:**
+```text
+: keepalive
+data: {"meta":{"trace_id":"...","message":"success","event_id":"abc-123"},"data":{"order_id":"abc-123","status":"SUCCESS","total_amount":150000}}
+```
+
+> **Note on Polling:** If using pubsub or if long-polling returns 202, the checkout is asynchronous. Use the `order_id` from the response to poll the status before paying. Alternatively, use SSE for true push notifications.
 
 ### Check Order Status (Polling)
 ```bash
