@@ -362,7 +362,6 @@ I have extensively documented every architectural decision, infrastructure confi
 |---|---|---|
 | **System Overview** | [`docs/architecture/system-architecture.md`](docs/architecture/system-architecture.md) | High-level topology, component diagrams, and traffic flow. |
 | **Saga Pattern** | [`docs/architecture/checkout-saga.md`](docs/architecture/checkout-saga.md) | Step-by-step Mermaid diagrams of the happy path, compensation, and reconciliation flows. |
-| **Reliability** | [`docs/architecture/resilience-patterns.md`](docs/architecture/resilience-patterns.md) | In-depth look at Circuit Breakers, Retry policies, DLQ, and Graceful Shutdowns. |
 | **Background Jobs** | [`docs/architecture/background-workers.md`](docs/architecture/background-workers.md) | Details on the Relay, Timeout, and Reconciliation workers. |
 | **Clean Code** | [`docs/implementation/go-hexagonal-architecture.md`](docs/implementation/go-hexagonal-architecture.md) | How Ports and Adapters are structured in this Go monorepo. |
 | **Event Streaming** | [`docs/events/kafka-operational-design.md`](docs/events/kafka-operational-design.md) | Kafka topic design, consumer groups, offsets, and Idempotency handling. |

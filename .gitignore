@@ -27,6 +27,7 @@ node_modules/
 docs/*
 !docs/architecture/
 docs/architecture/domain-architecture.md
+docs/architecture/resilience-patterns.md
 !docs/database/
 docs/database/logical-data-model.md
 !docs/deployment/
