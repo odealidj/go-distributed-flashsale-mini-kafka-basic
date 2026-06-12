@@ -350,7 +350,7 @@ You can easily verify these claims on your local machine using the provided `Mak
    make test-no-oversell
    # Or run: make test-breakpoint / make test-load-nginx
    ```
-> 📖 **Read the guide:** Check out the [K6 Results Reading Tutorial](performance-tests/TUTORIAL_MEMBACA_HASIL_K6.md) to understand how to interpret the console output.
+
 
 ---
 
