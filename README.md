@@ -171,7 +171,7 @@ git clone https://github.com/odealidj/go-distributed-flashsale-kf.git
 cd go-distributed-flashsale-kf
 
 # 2. Start everything (infrastructure + all microservices)
-make up
+make prod-up
 ```
 
 **Services will be available at:**
