@@ -27,6 +27,7 @@ node_modules/
 docs/*
 !docs/architecture/
 !docs/database/
+docs/database/logical-data-model.md
 !docs/deployment/
 !docs/events/
 !docs/grpc/
@@ -49,7 +50,6 @@ performance-tests/results/
 fix_*.sh
 fix_*.go
 setup_*.sh
-!docs/BLUEPRINT.md
 
 # Exclude documentation for public repo
 docc-referensi/

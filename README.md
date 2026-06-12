@@ -366,7 +366,6 @@ I have extensively documented every architectural decision, infrastructure confi
 | **Reliability** | [`docs/architecture/resilience-patterns.md`](docs/architecture/resilience-patterns.md) | In-depth look at Circuit Breakers, Retry policies, DLQ, and Graceful Shutdowns. |
 | **Background Jobs** | [`docs/architecture/background-workers.md`](docs/architecture/background-workers.md) | Details on the Relay, Timeout, and Reconciliation workers. |
 | **Clean Code** | [`docs/implementation/go-hexagonal-architecture.md`](docs/implementation/go-hexagonal-architecture.md) | How Ports and Adapters are structured in this Go monorepo. |
-| **Data & Storage** | [`docs/database/logical-data-model.md`](docs/database/logical-data-model.md) | Database schemas, ACID transaction boundaries, and Redis cache structures. |
 | **Event Streaming** | [`docs/events/kafka-operational-design.md`](docs/events/kafka-operational-design.md) | Kafka topic design, consumer groups, offsets, and Idempotency handling. |
 | **APIs** | [`docs/grpc/grpc-contracts.md`](docs/grpc/grpc-contracts.md) | Protobuf contracts and internal RPC communication strategies. |
 | **Infrastructure** | [`docs/deployment/docker-compose-deep-dive.md`](docs/deployment/docker-compose-deep-dive.md) | Line-by-line explanation of the entire Docker infrastructure and observability stack. |
