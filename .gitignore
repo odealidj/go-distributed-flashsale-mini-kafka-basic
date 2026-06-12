@@ -72,6 +72,7 @@ performance-tests/TUTORIAL_MEMBACA_HASIL_K6.md
 fix_*.sh
 fix_*.go
 setup_*.sh
+patch_prod.py
 
 # Exclude documentation for public repo
 docc-referensi/
