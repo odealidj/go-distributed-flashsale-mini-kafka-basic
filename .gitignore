@@ -29,6 +29,7 @@ docs/*
 docs/architecture/domain-architecture.md
 docs/architecture/resilience-patterns.md
 docs/architecture/background-workers.md
+docs/architecture/checkout-saga-sync.md
 !docs/database/
 docs/database/logical-data-model.md
 !docs/deployment/
