@@ -1,0 +1,400 @@
+openapi: 3.0.3
+info:
+  title: Flash Sale Mini Kafka API
+  description: API Gateway endpoints for the Distributed Flash Sale System.
+  version: 1.0.0
+servers:
+  - url: http://localhost:18000
+    description: Direct API Gateway (Bypass Nginx Rate Limiting)
+  - url: http://localhost:18081
+    description: Nginx Reverse Proxy (With Rate Limiting)
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Paste **hanya token JWT** di sini (TANPA kata "Bearer").
+        Token bisa didapatkan dari endpoint `/api/v1/login`.
+        Swagger UI akan otomatis menambahkan prefix `Bearer ` saat request dikirim.
+  schemas:
+    Meta:
+      type: object
+      properties:
+        trace_id:
+          type: string
+          example: "00000000000000000000000000000000"
+        message:
+          type: string
+        event_id:
+          type: string
+        page:
+          type: integer
+        per_page:
+          type: integer
+        total:
+          type: integer
+    AuthRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: "testuser"
+        password:
+          type: string
+          example: "password123"
+    CheckoutRequest:
+      type: object
+      required:
+        - product_id
+      properties:
+        product_id:
+          type: string
+          example: "prod_1"
+    PayRequest:
+      type: object
+      required:
+        - order_id
+        - amount
+      properties:
+        order_id:
+          type: string
+          example: "ord-12345"
+        amount:
+          type: integer
+          example: 100000
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        price:
+          type: integer
+        stock:
+          type: integer
+paths:
+  /api/v1/register:
+    post:
+      summary: Register a new user
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+      responses:
+        '200':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+        '400':
+          description: Bad request or username already exists
+  /api/v1/login:
+    post:
+      summary: Login and get JWT Token
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                  data:
+                    type: object
+                    properties:
+                      access_token:
+                        type: string
+        '401':
+          description: Invalid credentials
+  /api/v1/products:
+    get:
+      summary: Get list of products
+      tags:
+        - Products
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+  /api/v1/checkout:
+    post:
+      summary: Submit a checkout request
+      description: |
+        Submits an asynchronous checkout request. Requires a JWT token and an idempotency key to prevent double checkout.
+        NOTE: For load-testing mode, a token starting with `user-` or `fixed-user-` can bypass JWT RSA validation.
+      tags:
+        - Flash Sale
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: X-Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            example: "idemp-key-123"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+      responses:
+        '202':
+          description: Accepted — pesanan sedang diproses secara async
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  meta:
+                    type: object
+                    properties:
+                      trace_id:
+                        type: string
+                      event_id:
+                        type: string
+                      order_id:
+                        type: string
+                        description: Gunakan nilai ini untuk request ke /api/v1/pay
+                      message:
+                        type: string
+        '409':
+          description: Conflict (Out of stock or duplicate idempotency key)
+        '401':
+          description: Unauthorized
+        '429':
+          description: Too Many Requests (if hitting Nginx port)
+  /api/v1/checkout/pubsub:
+    post:
+      summary: Submit a checkout request via Redis Pub/Sub (Sync Bridging)
+      description: |
+        Submits a checkout request. The API Gateway will block and wait for the final status via Redis Pub/Sub before returning.
+      tags:
+        - Flash Sale
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: X-Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            example: "idemp-key-123"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+      responses:
+        '200':
+          description: OK. Checkout sukses, status order dikembalikan.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  meta:
+                    type: object
+                  data:
+                    type: object
+                    properties:
+                      order_id:
+                        type: string
+                      status:
+                        type: string
+        '409':
+          description: Conflict (Out of stock or duplicate idempotency key)
+        '401':
+          description: Unauthorized
+        '429':
+          description: Too Many Requests (if hitting Nginx port)
+
+  /api/v1/checkout/long-polling:
+    post:
+      summary: Submit a checkout request via Long-Polling (Sync Bridging)
+      description: |
+        Submits a checkout request. The API Gateway will loop and poll the Order Service gRPC until the final status is ready.
+      tags:
+        - Flash Sale
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: X-Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            example: "idemp-key-123"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+      responses:
+        '200':
+          description: OK. Checkout sukses, status order dikembalikan.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  meta:
+                    type: object
+                  data:
+                    type: object
+                    properties:
+                      order_id:
+                        type: string
+                      status:
+                        type: string
+        '202':
+          description: Accepted. Polling timeout reached.
+        '409':
+          description: Conflict (Out of stock or duplicate idempotency key)
+        '401':
+          description: Unauthorized
+
+  /api/v1/checkout/sse:
+    post:
+      summary: Submit a checkout request via Server-Sent Events (SSE)
+      description: |
+        Submits a checkout request. The API Gateway will hold the connection open using SSE and stream the final status as an event.
+      tags:
+        - Flash Sale
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: X-Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            example: "idemp-key-123"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+      responses:
+        '200':
+          description: Event Stream. Returns text/event-stream.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                example: "data: {\"order_id\":\"1234-abcd\",\"status\":\"PENDING\"}\n\n"
+        '409':
+          description: Conflict (Out of stock or duplicate idempotency key)
+        '401':
+          description: Unauthorized
+
+  /api/v1/pay:
+    post:
+      summary: Process payment for an order
+      tags:
+        - Order & Payment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PayRequest'
+      responses:
+        '200':
+          description: Payment successful
+        '401':
+          description: Unauthorized
+        '500':
+          description: Payment failed
+  /api/v1/orders/{order_id}:
+    get:
+      summary: Get order status
+      tags:
+        - Order & Payment
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: order_id
+          required: true
+          schema:
+            type: string
+          description: ID of the order
+      responses:
+        '200':
+          description: Order details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  meta:
+                    type: object
+                    properties:
+                      trace_id:
+                        type: string
+                      message:
+                        type: string
+                  data:
+                    type: object
+                    properties:
+                      order_id:
+                        type: string
+                      status:
+                        type: string
+                      total_amount:
+                        type: integer
+        '401':
+          description: Unauthorized
+        '404':
+          description: Order not found
