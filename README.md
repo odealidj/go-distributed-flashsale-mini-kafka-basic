@@ -175,10 +175,10 @@ git clone https://github.com/odealidj/go-distributed-flashsale-kf.git
 cd go-distributed-flashsale-kf
 
 # 2. Start everything (infrastructure + all microservices)
-make prod-up
+make up
 
 # 3. Stop everything
-make prod-down
+make down
 ```
 
 **Services will be available at:**
@@ -339,7 +339,7 @@ You can easily verify these claims on your local machine using the provided `Mak
 
 1. **Start Production Infrastructure** (Redis Sentinel HA + Kafka):
    ```bash
-   make prod-up
+   make up
    ```
 2. **Seed Initial Stock**:
    ```bash
