@@ -1,0 +1,140 @@
+{
+    "root_group": {
+        "groups": {},
+        "checks": {
+                "checkout direspon 200 OK ATAU 409 (Stok Habis)": {
+                    "name": "checkout direspon 200 OK ATAU 409 (Stok Habis)",
+                    "path": "::checkout direspon 200 OK ATAU 409 (Stok Habis)",
+                    "id": "509b4a00c3ba5a06c62ace1e8cbfa2d6",
+                    "passes": 219,
+                    "fails": 7182
+                },
+                "status payload bukan PENDING": {
+                    "path": "::status payload bukan PENDING",
+                    "id": "c7aeb4020155128135319eb62f322098",
+                    "passes": 219,
+                    "fails": 7182,
+                    "name": "status payload bukan PENDING"
+                }
+            },
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "metrics": {
+        "iteration_duration": {
+            "min": 100.381326,
+            "med": 101.475537,
+            "max": 115.336822,
+            "p(90)": 102.625691,
+            "p(95)": 103.163962,
+            "avg": 101.64278906296471
+        },
+        "http_req_failed": {
+            "passes": 7401,
+            "fails": 2,
+            "value": 0.9997298392543563
+        },
+        "iterations": {
+            "count": 7401,
+            "rate": 365.71089150834933
+        },
+        "http_req_blocked": {
+            "avg": 0.012382969471835814,
+            "min": 0.005168,
+            "med": 0.009149,
+            "max": 1.784318,
+            "p(90)": 0.011873,
+            "p(95)": 0.01327
+        },
+        "http_req_receiving": {
+            "min": 0.015226,
+            "med": 0.041975,
+            "max": 1.187869,
+            "p(90)": 0.065302,
+            "p(95)": 0.082413,
+            "avg": 0.049839091719573354
+        },
+        "checks": {
+            "passes": 438,
+            "fails": 14364,
+            "value": 0.02959059586542359
+        },
+        "data_received": {
+            "rate": 121252.16010774918,
+            "count": 2453816
+        },
+        "http_req_tls_handshaking": {
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "http_req_connecting": {
+            "avg": 0.0015107252465216803,
+            "min": 0,
+            "med": 0,
+            "max": 0.940629,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "vus_max": {
+            "min": 50,
+            "max": 50,
+            "value": 50
+        },
+        "http_req_duration": {
+            "min": 0.166573,
+            "med": 0.628297,
+            "max": 68.710673,
+            "p(90)": 1.7214740000000004,
+            "p(95)": 2.3315552999999976,
+            "avg": 0.902743826421724,
+            "thresholds": {
+                "p(95)<3000": false
+            }
+        },
+        "data_sent": {
+            "count": 5662174,
+            "rate": 279789.0422125924
+        },
+        "http_req_duration{expected_response:true}": {
+            "max": 68.710673,
+            "p(90)": 68.2682883,
+            "p(95)": 68.48948065,
+            "avg": 66.4987495,
+            "min": 64.286826,
+            "med": 66.4987495
+        },
+        "http_req_sending": {
+            "avg": 0.03625822801566941,
+            "min": 0.009499,
+            "med": 0.02193,
+            "max": 3.097901,
+            "p(90)": 0.040508,
+            "p(95)": 0.08973999999999997
+        },
+        "http_req_waiting": {
+            "max": 68.486201,
+            "p(90)": 1.5896962000000001,
+            "p(95)": 2.195182499999999,
+            "avg": 0.8166465066864781,
+            "min": 0.124039,
+            "med": 0.545325
+        },
+        "vus": {
+            "value": 3,
+            "min": 3,
+            "max": 50
+        },
+        "http_reqs": {
+            "count": 7403,
+            "rate": 365.80971893478045
+        }
+    },
+    "setup_data": {
+        "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODA3NDI5NDcsImlhdCI6MTc4MDc0MjA0NywianRpIjoiMWM5NDBjOTgtNzZkOC00MTMyLTg2ODMtYzBiZjNmZGE3N2ExIiwic3ViIjoidXNyXzE4OGRhM2RkIn0.nT-7S4_wM_3kprUhe7RgELFF5x2q0GpoNI4DUxGIURTvDfonLFlsLUwLZJ4qApT9frZsXH3gHqa9Hzex9Lua6bVr2XVIm4bTVSZs1hWUDPjuBBzielhitB2y-6trqhP3rRXVtVP7iPsGYY4AzWBAZfsmWuD1osSwMZoacArCSntBUYI9Yr3xPKWjJuQA_uYAJGzaEKRtj0IShRVmFngH04vJhccI2QLxvr1fGRz3tkEI8aRm30vok64Kl4-FCPEkfCr5CjvnqMdwX6hxWHSXJJlgXxxvgMCVjVPFmPelKU1YAG6dWlTg97y2j5qlSQdFs0R3__Y850qv6A69eY-fvA"
+    }
+}

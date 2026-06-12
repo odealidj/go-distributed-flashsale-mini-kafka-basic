@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package flashsale.order.v1;
+
+option go_package = "flashsale/order/api/order/v1;v1";
+
+service OrderService {
+  // Dipanggil oleh Gateway untuk melihat status pesanan user
+  rpc GetOrder (GetOrderRequest) returns (GetOrderResponse);
+}
+
+message GetOrderRequest {
+  string order_id = 1;
+  string user_id = 2;
+}
+
+message GetOrderResponse {
+  string order_id = 1;
+  string status = 2;
+  int64 total_amount = 3;
+}

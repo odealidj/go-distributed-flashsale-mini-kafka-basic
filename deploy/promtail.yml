@@ -1,0 +1,44 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: warn
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+    batchwait: 1s
+    batchsize: 102400
+    backoff_config:
+      min_period: 500ms
+      max_period: 5m
+      max_retries: 10
+
+scrape_configs:
+  # Scrape log dari file yang dihasilkan oleh skrip journald-to-file.sh
+  - job_name: flashsale-containers
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: flashsale
+          __path__: /tmp/flashsale-logs/*.log
+    pipeline_stages:
+      # Ekstrak nama service dari nama file log
+      - match:
+          selector: '{job="flashsale"}'
+          stages:
+            - regex:
+                source: filename
+                expression: '/tmp/flashsale-logs/(?P<service_name>[^.]+)\.log'
+            - labels:
+                service_name:
+      # Ekstrak log level dari isi pesan (format slog Golang)
+      - regex:
+          expression: '(?i)(level=(?P<level>info|warn|error|debug)|(?P<level2>INFO|WARN|ERROR|DEBUG))'
+      - template:
+          source: level
+          template: '{{ if .level }}{{ .level }}{{ else if .level2 }}{{ ToLower .level2 }}{{ end }}'
+      - labels:
+          level:

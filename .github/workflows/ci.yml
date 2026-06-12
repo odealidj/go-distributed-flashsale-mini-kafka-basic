@@ -1,0 +1,106 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ "main", "feature/*" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  # ─────────────────────────────────────────────
+  # Job 1: Unit Tests & Linter (semua service)
+  # Berjalan di semua push/PR, cepat, tanpa Docker
+  # ─────────────────────────────────────────────
+  unit-test-and-lint:
+    name: Unit Tests & Lint
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.26.2'
+        cache: true
+
+    - name: Install golangci-lint
+      run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.54.2
+
+    - name: Lint & Test — Shared
+      run: |
+        cd shared
+        golangci-lint run ./... || echo "Linter warnings in shared"
+        go test -v -cover ./...
+
+    - name: Lint & Test — Order Service
+      run: |
+        cd order-service
+        golangci-lint run ./... || echo "Linter warnings in order-service"
+        go test -v -cover ./...
+
+    - name: Lint & Test — Payment Service
+      run: |
+        cd payment-service
+        golangci-lint run ./... || echo "Linter warnings in payment-service"
+        go test -v -cover ./...
+
+    - name: Lint & Test — Inventory Service
+      run: |
+        cd inventory-service
+        golangci-lint run ./... || echo "Linter warnings in inventory-service"
+        go test -v -cover ./...
+
+    - name: Lint & Test — Product Service
+      run: |
+        cd product-service
+        golangci-lint run ./... || echo "Linter warnings in product-service"
+        go test -v -cover ./...
+
+    - name: Lint & Test — API Gateway
+      run: |
+        cd api-gateway
+        golangci-lint run ./... || echo "Linter warnings in api-gateway"
+        go test -v -cover ./...
+
+  # ─────────────────────────────────────────────
+  # Job 2: Integration Tests (Testcontainers-Go)
+  # Membutuhkan Docker daemon — berjalan di ubuntu-latest
+  # yang sudah pre-installed dengan Docker Engine
+  # ─────────────────────────────────────────────
+  integration-test:
+    name: Integration Tests (Testcontainers)
+    runs-on: ubuntu-latest
+    # Hanya jalankan integration tests untuk push ke main atau PR ke main
+    # untuk menghemat waktu pada feature branch development
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.26.2'
+        cache: true
+
+    - name: Verify Docker is available
+      run: docker info
+
+    - name: Run Integration Tests — Inventory Service
+      run: |
+        cd inventory-service
+        go test -v -tags=integration -timeout=120s ./internal/adapter/outbound/...
+      env:
+        # Testcontainers akan menggunakan Docker daemon default (tersedia di ubuntu-latest)
+        # DOCKER_HOST tidak perlu di-override — github runner sudah menggunakan /var/run/docker.sock
+        TESTCONTAINERS_RYUK_DISABLED: "false"
+
+    - name: Upload Test Results (optional)
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: integration-test-results
+        path: inventory-service/test-results/
+        if-no-files-found: ignore

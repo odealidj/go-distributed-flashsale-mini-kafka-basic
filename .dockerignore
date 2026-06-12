@@ -1,0 +1,9 @@
+.git
+.github
+.env
+bin/
+*.log
+*.pid
+docs/
+performance-tests/results/
+k6/results/

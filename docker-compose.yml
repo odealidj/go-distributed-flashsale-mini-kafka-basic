@@ -1,0 +1,400 @@
+version: '3.8'
+
+services:
+  # ----------------------------------------------------
+  # 1. DATABASE (POSTGRESQL)
+  # ----------------------------------------------------
+  postgres:
+    image: docker.io/postgres:${POSTGRES_VERSION:-15-alpine}
+    container_name: flashsale-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-root}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rootpassword}
+      POSTGRES_DB: ${POSTGRES_DB:-flashsale_master}
+    ports:
+      # Di laptop, ini akan dibind ke port non-standar lokal (misal: 15432)
+      - "${DB_HOST_BIND:-127.0.0.1}:${DB_PORT:-15432}:${DB_INTERNAL_PORT:-5432}"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init-dbs.sh:/docker-entrypoint-initdb.d/init-dbs.sh
+    networks:
+      - flashsale_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-root} -d ${POSTGRES_DB:-flashsale_master}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------
+  # 2. CACHE & ATOMIC COUNTER (REDIS)
+  # ----------------------------------------------------
+  redis:
+    image: docker.io/redis:${REDIS_VERSION:-7-alpine}
+    container_name: flashsale-redis
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+    ports:
+      # Di laptop, ini akan dibind ke port non-standar lokal (misal: 16379)
+      - "${REDIS_HOST_BIND:-127.0.0.1}:${REDIS_PORT:-16379}:${REDIS_INTERNAL_PORT:-6379}"
+    networks:
+      - flashsale_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ----------------------------------------------------
+  # 3. MESSAGE BROKER (KAFKA - KRaft Mode)
+  # ----------------------------------------------------
+  kafka:
+    image: docker.io/bitnamilegacy/kafka:${KAFKA_VERSION:-3.5.1}
+    container_name: flashsale-kafka
+    environment:
+      - KAFKA_ENABLE_KRAFT=yes
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:${KAFKA_INTERNAL_PORT:-9092},CONTROLLER://:9093,EXTERNAL://:9094
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://${KAFKA_INTERNAL_HOST:-kafka}:${KAFKA_INTERNAL_PORT:-9092},EXTERNAL://${KAFKA_PUBLIC_IP_OR_HOST:-localhost}:${KAFKA_EXTERNAL_PORT:-19094}
+      - KAFKA_BROKER_ID=1
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@${KAFKA_INTERNAL_HOST:-kafka}:9093
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_HEAP_OPTS=-Xms512M -Xmx1G
+    ports:
+      # Internal network port terekspos ke host di port non-standar
+      - "${KAFKA_PORT:-19092}:${KAFKA_INTERNAL_PORT:-9092}"
+      - "${KAFKA_HOST_BIND:-127.0.0.1}:${KAFKA_EXTERNAL_PORT:-19094}:9094"
+    networks:
+      - flashsale_net
+    volumes:
+      - kafkadata:/bitnami/kafka
+
+  # ----------------------------------------------------
+  # 4. KAFKA UI (PROVE)
+  # ----------------------------------------------------
+  kafka-ui:
+    image: docker.io/provectuslabs/kafka-ui:latest
+    container_name: flashsale-kafka-ui
+    depends_on:
+      - kafka
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=${KAFKA_INTERNAL_HOST:-kafka}:${KAFKA_INTERNAL_PORT:-9092}
+    ports:
+      - "${KAFKA_UI_PORT:-18080}:8080"
+    networks:
+      - flashsale_net
+
+  # ----------------------------------------------------
+  # 5. OBSERVABILITY (OTEL, JAEGER, PROMETHEUS, GRAFANA)
+  # ----------------------------------------------------
+  otel-collector:
+    image: docker.io/otel/opentelemetry-collector-contrib:latest
+    container_name: flashsale-otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./deploy/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "4317:4317" # OTLP gRPC receiver
+      - "4318:4318" # OTLP HTTP receiver
+      - "8889:8889" # Prometheus metrics exporter
+    networks:
+      - flashsale_net
+
+  jaeger:
+    image: docker.io/jaegertracing/all-in-one:${JAEGER_VERSION:-latest}
+    container_name: flashsale-jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "${JAEGER_HOST_BIND:-127.0.0.1}:${JAEGER_UI_PORT:-16686}:16686"         # UI
+    networks:
+      - flashsale_net
+
+  prometheus:
+    image: docker.io/prom/prometheus:latest
+    container_name: flashsale-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-remote-write-receiver
+    volumes:
+      - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - flashsale_net
+
+  grafana:
+    image: docker.io/grafana/grafana:latest
+    container_name: flashsale-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./deploy/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./deploy/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+    ports:
+      - "3000:3000"
+    networks:
+      - flashsale_net
+
+  # ----------------------------------------------------
+  # LOGGING: Grafana Loki (Log Database)
+  # ----------------------------------------------------
+  loki:
+    image: docker.io/grafana/loki:latest
+    container_name: flashsale-loki
+    command: -config.file=/etc/loki/loki.yml
+    volumes:
+      - ./deploy/loki.yml:/etc/loki/loki.yml:ro
+      - loki_data:/loki
+    ports:
+      - "${LOKI_PORT:-3100}:3100"
+    networks:
+      - flashsale_net
+    user: "0"  # Jalankan sebagai root agar dapat menulis ke volume Podman
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------
+  # LOGGING: Promtail (Log Collector - File Scraper)
+  # Membaca log dari /tmp/flashsale-logs yang diisi
+  # oleh skrip deploy/journald-to-loki.sh
+  # ----------------------------------------------------
+  promtail:
+    image: docker.io/grafana/promtail:latest
+    container_name: flashsale-promtail
+    volumes:
+      - ./deploy/promtail.yml:/etc/promtail/config.yml:ro
+      # Mount folder log yang diisi dari journald-to-loki.sh
+      - /tmp/flashsale-logs:/tmp/flashsale-logs:ro
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - flashsale_net
+
+  # ----------------------------------------------------
+  # 6. REVERSE PROXY / API GATEWAY FRONTEND (NGINX)
+  # ----------------------------------------------------
+  nginx:
+    image: docker.io/nginx:${NGINX_VERSION:-alpine}
+    container_name: flashsale-nginx
+    ports:
+      - "${NGINX_HOST_BIND:-127.0.0.1}:${NGINX_PORT:-18081}:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - flashsale_net
+
+  # ----------------------------------------------------
+  # 6.5 API DOCUMENTATION (SWAGGER UI)
+  # ----------------------------------------------------
+  swagger-ui:
+    image: docker.io/swaggerapi/swagger-ui:latest
+    container_name: flashsale-swagger-ui
+    ports:
+      - "18082:8080"
+    volumes:
+      - ./docs/openapi.yaml:/app/openapi.yaml:ro
+    environment:
+      - SWAGGER_JSON=/app/openapi.yaml
+    networks:
+      - flashsale_net
+
+  # ----------------------------------------------------
+  # 7. GO SERVICES (API GATEWAY & BACKENDS)
+  # ----------------------------------------------------
+  api-gateway:
+    build:
+      context: .
+      dockerfile: ./api-gateway/Dockerfile
+    container_name: flashsale-${API_GATEWAY_HOST:-api-gateway}
+    profiles: ["app"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    ports:
+      - "${API_GATEWAY_PORT:-18000}:${API_GATEWAY_INTERNAL_PORT:-8000}"
+    volumes:
+      - ./certs/public.pem:/app/certs/public.pem:ro
+    environment:
+      - APP_ENV=${APP_ENV:-development}
+      - API_GATEWAY_PORT=${API_GATEWAY_INTERNAL_PORT:-8000}
+      - PRODUCT_SERVICE_ENDPOINT=${PRODUCT_SERVICE_ENDPOINT:-product-service:9001}
+      - INVENTORY_SERVICE_ENDPOINT=${INVENTORY_SERVICE_ENDPOINT:-inventory-service:9002}
+      - PAYMENT_SERVICE_ENDPOINT=${PAYMENT_SERVICE_ENDPOINT:-payment-service:9003}
+      - AUTH_SERVICE_ENDPOINT=${AUTH_SERVICE_ENDPOINT:-auth-service:9004}
+      - ORDER_SERVICE_ENDPOINT=${ORDER_SERVICE_ENDPOINT:-order-service:9005}
+      - JWT_PUBLIC_KEY_PATH=/app/certs/public.pem
+      - REDIS_HOST=${REDIS_INTERNAL_HOST:-redis}
+      - REDIS_PORT=${REDIS_INTERNAL_PORT:-6379}
+      - REDIS_ADDR=${REDIS_INTERNAL_HOST:-redis}:${REDIS_INTERNAL_PORT:-6379}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
+    networks:
+      - flashsale_net
+
+  product-service:
+    build:
+      context: .
+      dockerfile: ./product-service/Dockerfile
+    container_name: flashsale-${PRODUCT_SERVICE_HOST:-product-service}
+    profiles: ["app"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${PRODUCT_SERVICE_PORT:-19001}:${PRODUCT_SERVICE_INTERNAL_PORT:-9001}"
+    environment:
+      - APP_ENV=${APP_ENV:-development}
+      - DB_HOST=${DB_INTERNAL_HOST:-postgres}
+      - DB_PORT=${DB_INTERNAL_PORT:-5432}
+      - POSTGRES_USER=${POSTGRES_USER:-root}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-rootpassword}
+      - POSTGRES_DB=${DB_PRODUCT:-db_product}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-root}:${POSTGRES_PASSWORD:-rootpassword}@${DB_INTERNAL_HOST:-postgres}:${DB_INTERNAL_PORT:-5432}/${DB_PRODUCT:-db_product}?sslmode=disable
+      - PRODUCT_SERVICE_PORT=${PRODUCT_SERVICE_INTERNAL_PORT:-9001}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
+    networks:
+      - flashsale_net
+
+  inventory-service:
+    build:
+      context: .
+      dockerfile: ./inventory-service/Dockerfile
+    container_name: flashsale-${INVENTORY_SERVICE_HOST:-inventory-service}
+    profiles: ["app"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    ports:
+      - "${INVENTORY_SERVICE_PORT:-19002}:${INVENTORY_SERVICE_INTERNAL_PORT:-9002}"
+    environment:
+      - APP_ENV=${APP_ENV:-development}
+      - DB_HOST=${DB_INTERNAL_HOST:-postgres}
+      - DB_PORT=${DB_INTERNAL_PORT:-5432}
+      - POSTGRES_USER=${POSTGRES_USER:-root}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-rootpassword}
+      - POSTGRES_DB=${DB_INVENTORY:-db_inventory}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-root}:${POSTGRES_PASSWORD:-rootpassword}@${DB_INTERNAL_HOST:-postgres}:${DB_INTERNAL_PORT:-5432}/${DB_INVENTORY:-db_inventory}?sslmode=disable
+      - REDIS_HOST=${REDIS_INTERNAL_HOST:-redis}
+      - REDIS_PORT=${REDIS_INTERNAL_PORT:-6379}
+      - REDIS_ADDR=${REDIS_INTERNAL_HOST:-redis}:${REDIS_INTERNAL_PORT:-6379}
+      - INVENTORY_SERVICE_PORT=${INVENTORY_SERVICE_INTERNAL_PORT:-9002}
+      - KAFKA_HOST=${KAFKA_INTERNAL_HOST:-kafka}
+      - KAFKA_EXTERNAL_PORT=${KAFKA_INTERNAL_PORT:-9092}
+      - KAFKA_BROKERS=${KAFKA_INTERNAL_HOST:-kafka}:${KAFKA_INTERNAL_PORT:-9092}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
+    networks:
+      - flashsale_net
+
+  order-service:
+    build:
+      context: .
+      dockerfile: ./order-service/Dockerfile
+    container_name: flashsale-${ORDER_SERVICE_HOST:-order-service}
+    profiles: ["app"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    environment:
+      - APP_ENV=${APP_ENV:-development}
+      - DB_HOST=${DB_INTERNAL_HOST:-postgres}
+      - DB_PORT=${DB_INTERNAL_PORT:-5432}
+      - POSTGRES_USER=${POSTGRES_USER:-root}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-rootpassword}
+      - POSTGRES_DB=${DB_ORDER:-db_order}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-root}:${POSTGRES_PASSWORD:-rootpassword}@${DB_INTERNAL_HOST:-postgres}:${DB_INTERNAL_PORT:-5432}/${DB_ORDER:-db_order}?sslmode=disable
+      - KAFKA_HOST=${KAFKA_INTERNAL_HOST:-kafka}
+      - KAFKA_EXTERNAL_PORT=${KAFKA_INTERNAL_PORT:-9092}
+      - KAFKA_BROKERS=${KAFKA_INTERNAL_HOST:-kafka}:${KAFKA_INTERNAL_PORT:-9092}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
+      - REDIS_HOST=${REDIS_INTERNAL_HOST:-redis}
+      - REDIS_PORT=${REDIS_INTERNAL_PORT:-6379}
+      - REDIS_ADDR=${REDIS_INTERNAL_HOST:-redis}:${REDIS_INTERNAL_PORT:-6379}
+    networks:
+      - flashsale_net
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: ./payment-service/Dockerfile
+    container_name: flashsale-${PAYMENT_SERVICE_HOST:-payment-service}
+    profiles: ["app"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    ports:
+      - "${PAYMENT_SERVICE_PORT:-19003}:${PAYMENT_SERVICE_INTERNAL_PORT:-9003}"
+    environment:
+      - APP_ENV=${APP_ENV:-development}
+      - DB_HOST=${DB_INTERNAL_HOST:-postgres}
+      - DB_PORT=${DB_INTERNAL_PORT:-5432}
+      - POSTGRES_USER=${POSTGRES_USER:-root}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-rootpassword}
+      - POSTGRES_DB=${DB_PAYMENT:-db_payment}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-root}:${POSTGRES_PASSWORD:-rootpassword}@${DB_INTERNAL_HOST:-postgres}:${DB_INTERNAL_PORT:-5432}/${DB_PAYMENT:-db_payment}?sslmode=disable
+      - PAYMENT_SERVICE_PORT=${PAYMENT_SERVICE_INTERNAL_PORT:-9003}
+      - KAFKA_HOST=${KAFKA_INTERNAL_HOST:-kafka}
+      - KAFKA_EXTERNAL_PORT=${KAFKA_INTERNAL_PORT:-9092}
+      - KAFKA_BROKERS=${KAFKA_INTERNAL_HOST:-kafka}:${KAFKA_INTERNAL_PORT:-9092}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
+    networks:
+      - flashsale_net
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: ./auth-service/Dockerfile
+    container_name: flashsale-${AUTH_SERVICE_HOST:-auth-service}
+    profiles: ["app"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${AUTH_SERVICE_PORT:-19004}:${AUTH_SERVICE_INTERNAL_PORT:-9004}"
+    volumes:
+      - ./certs/private.pem:/app/certs/private.pem:ro
+    environment:
+      - APP_ENV=${APP_ENV:-development}
+      - DB_HOST=${DB_INTERNAL_HOST:-postgres}
+      - DB_PORT=${DB_INTERNAL_PORT:-5432}
+      - POSTGRES_USER=${POSTGRES_USER:-root}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-rootpassword}
+      - POSTGRES_DB=${DB_AUTH:-db_auth}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-root}:${POSTGRES_PASSWORD:-rootpassword}@${DB_INTERNAL_HOST:-postgres}:${DB_INTERNAL_PORT:-5432}/${DB_AUTH:-db_auth}?sslmode=disable
+      - AUTH_SERVICE_PORT=${AUTH_SERVICE_INTERNAL_PORT:-9004}
+      - JWT_PRIVATE_KEY_PATH=/app/certs/private.pem
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
+    networks:
+      - flashsale_net
+
+volumes:
+  pgdata:
+  kafkadata:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+
+networks:
+  flashsale_net:
+    driver: bridge

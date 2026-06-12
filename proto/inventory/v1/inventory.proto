@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package flashsale.inventory.v1;
+
+option go_package = "flashsale/inventory/api/inventory/v1;v1";
+
+service InventoryService {
+  // Dipanggil oleh API Gateway saat User menekan tombol beli.
+  rpc ReserveStock (ReserveStockRequest) returns (ReserveStockResponse);
+  
+  // (Internal) Dipanggil jika Order batal atau gagal bayar.
+  rpc ReleaseStock (ReleaseStockRequest) returns (ReleaseStockResponse);
+}
+
+message ReserveStockRequest {
+  string idempotency_key = 1;
+  string user_id = 2;
+  string product_id = 3;
+  int32 quantity = 4;
+}
+
+
+message ReserveStockResponse {
+  bool success = 1;
+  string event_id = 2; // ID Event Outbox yang terbentuk
+  string message = 3;
+}
+
+message ReleaseStockRequest {
+  string product_id = 1;
+  int32 quantity = 2;
+}
+
+message ReleaseStockResponse {
+  bool success = 1;
+}

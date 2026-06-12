@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package flashsale.product.v1;
+
+option go_package = "flashsale/product/api/product/v1;v1";
+
+service ProductService {
+  // Dipanggil API Gateway untuk menampilkan daftar barang flash sale
+  rpc ListFlashSaleProducts (ListFlashSaleProductsRequest) returns (ListFlashSaleProductsResponse);
+}
+
+message ListFlashSaleProductsRequest {
+  int32 page = 1;
+  int32 per_page = 2;
+}
+
+message ListFlashSaleProductsResponse {
+  repeated ProductItem products = 1;
+  int32 total_items = 2;
+}
+
+message ProductItem {
+  string id = 1;
+  string name = 2;
+  int64 original_price = 3;
+  int64 flashsale_price = 4;
+}

@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package flashsale.payment.v1;
+
+option go_package = "flashsale/payment/api/payment/v1;v1";
+
+service PaymentService {
+  // Dipanggil API Gateway ketika user ingin mendapatkan Virtual Account / link bayar
+  rpc ProcessPayment (ProcessPaymentRequest) returns (ProcessPaymentResponse);
+}
+
+message ProcessPaymentRequest {
+  string order_id = 1;
+  string user_id = 2;
+  int64 amount = 3;
+}
+
+message ProcessPaymentResponse {
+  string payment_id = 1;
+  string payment_url = 2; // Link Midtrans / Xendit mock
+}

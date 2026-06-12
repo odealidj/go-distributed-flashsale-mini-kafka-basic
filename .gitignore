@@ -1,0 +1,56 @@
+# Environment variables (secrets)
+.env
+
+# Logs and PIDs
+*.log
+*.pid
+.local-pids/
+.local-logs/
+
+# System files
+.DS_Store
+Thumbs.db
+node_modules/
+
+# Go binaries and temporary files
+/dist/
+/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Ignore files in docs folder tapi jangan ignore sub-foldernya agar IDE bisa membaca
+docs/*
+!docs/architecture/
+!docs/database/
+!docs/deployment/
+!docs/events/
+!docs/grpc/
+!docs/implementation/
+!docs/observability/
+!docs/openapi.yaml
+!docs/interview-qa.md
+
+# Test Results
+results/
+performance-tests/results/
+
+# IDE and OS
+.vscode/
+.idea/
+*.swp
+*~
+
+# Utility Scripts
+fix_*.sh
+fix_*.go
+setup_*.sh
+!docs/BLUEPRINT.md
+
+# Exclude documentation for public repo
+docs/
+docc-referensi/
