@@ -384,4 +384,4 @@ Key architectural decisions are documented transparently:
 
 ---
 
-<p align="center">Built with ❤️ to demonstrate production-grade distributed system design in Go</p>
+<p align="center">Production-ready Microservices Architecture in Golang.</p>
