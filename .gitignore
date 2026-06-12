@@ -51,7 +51,5 @@ fix_*.go
 setup_*.sh
 !docs/BLUEPRINT.md
 
-# Exclude documentation for public repo but keep OpenAPI specs for Swagger UI
-docs/*
-!docs/openapi.yaml
+# Exclude documentation for public repo
 docc-referensi/
