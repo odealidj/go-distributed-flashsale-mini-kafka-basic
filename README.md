@@ -361,7 +361,6 @@ I have extensively documented every architectural decision, infrastructure confi
 | Focus Area | Document | Description |
 |---|---|---|
 | **System Overview** | [`docs/architecture/system-architecture.md`](docs/architecture/system-architecture.md) | High-level topology, component diagrams, and traffic flow. |
-| **Domain Logic** | [`docs/architecture/domain-architecture.md`](docs/architecture/domain-architecture.md) | C4 Model, bounded contexts, and service responsibilities. |
 | **Saga Pattern** | [`docs/architecture/checkout-saga.md`](docs/architecture/checkout-saga.md) | Step-by-step Mermaid diagrams of the happy path, compensation, and reconciliation flows. |
 | **Reliability** | [`docs/architecture/resilience-patterns.md`](docs/architecture/resilience-patterns.md) | In-depth look at Circuit Breakers, Retry policies, DLQ, and Graceful Shutdowns. |
 | **Background Jobs** | [`docs/architecture/background-workers.md`](docs/architecture/background-workers.md) | Details on the Relay, Timeout, and Reconciliation workers. |

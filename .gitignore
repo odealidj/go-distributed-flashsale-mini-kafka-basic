@@ -26,6 +26,7 @@ node_modules/
 # Ignore files in docs folder tapi jangan ignore sub-foldernya agar IDE bisa membaca
 docs/*
 !docs/architecture/
+docs/architecture/domain-architecture.md
 !docs/database/
 docs/database/logical-data-model.md
 !docs/deployment/
